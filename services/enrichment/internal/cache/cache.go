@@ -31,7 +31,7 @@ func New(rdb *redis.Client) *Cache {
 // The version segment bumps on schema change; old entries age out via TTL.
 func searchKey(kind, q string) string {
 	sum := sha256.Sum256([]byte(q))
-	return "search:v3:" + kind + ":" + hex.EncodeToString(sum[:])
+	return "search:v4:" + kind + ":" + hex.EncodeToString(sum[:])
 }
 
 func productKey(id string) string { return "product:v1:" + id }

@@ -10,14 +10,16 @@ import (
 	"sort"
 
 	"github.com/levonn-dev/vgkeep/libs/go/contract/common"
+	"github.com/levonn-dev/vgkeep/libs/go/regionkit"
 	"github.com/levonn-dev/vgkeep/services/enrichment/internal/gen/api"
 	"github.com/levonn-dev/vgkeep/services/enrichment/internal/match"
 	"github.com/levonn-dev/vgkeep/services/enrichment/internal/store"
 )
 
 // ListPlatforms serves the platform catalog joined with alias
-// knowledge, for the custom-entry picker and normalize lever. Cached
-// 24h; a cold build fetches wholesale via ensurePlatforms.
+// knowledge, minus digital-only platforms (regionkit.DigitalOnlyPlatformIDs),
+// for the custom-entry picker and normalize lever. Cached 24h; a cold
+// build fetches wholesale via ensurePlatforms.
 func (h *Handlers) ListPlatforms(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	if body, err := h.cache.GetPlatforms(ctx); err != nil {
@@ -35,6 +37,9 @@ func (h *Handlers) ListPlatforms(w http.ResponseWriter, r *http.Request) {
 	}
 	out := api.PlatformCatalog{Platforms: make([]common.CatalogPlatform, 0, len(cats))}
 	for _, c := range cats {
+		if regionkit.DigitalOnlyPlatformIDs[c.ID] {
+			continue
+		}
 		// PlatformAliases returns nil for no known aliases; coalesce to
 		// [] since the contract requires string[], not null.
 		al := match.PlatformAliases(c.Name)

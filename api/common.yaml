@@ -1222,7 +1222,8 @@ components:
     ResolveRequest:
       description: >
         type game requires igdb_game_id + platform_igdb_id (the
-        platform must be one the game released on). Game identity is
+        platform must be one the game released on and not a
+        digital-only platform). Game identity is
         listing-keyed - (game, platform, PriceCharting listing) - so
         edition/variant on a game resolve are ignored (entry-level
         facts, like pc_listing); region is a matching input only (see
@@ -1321,6 +1322,9 @@ components:
         name: { type: string }
         igdb_game_id: { type: integer, format: int64 }
         platforms:
+          description: >
+            Platforms the game released on, minus digital-only platforms
+            (a game left with none is not returned). Games only.
           type: array
           items: { $ref: "#/components/schemas/PlatformRef" }
         first_release_date: { type: string, format: date }

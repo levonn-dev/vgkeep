@@ -17,6 +17,7 @@ import (
 
 	"github.com/levonn-dev/vgkeep/libs/go/contract/common"
 	"github.com/levonn-dev/vgkeep/libs/go/httpkit"
+	"github.com/levonn-dev/vgkeep/libs/go/regionkit"
 	"github.com/levonn-dev/vgkeep/services/enrichment/internal/gen/api"
 	"github.com/levonn-dev/vgkeep/services/enrichment/internal/igdb"
 	"github.com/levonn-dev/vgkeep/services/enrichment/internal/match"
@@ -445,8 +446,12 @@ func (h *Handlers) gamePayloadFor(ctx context.Context, gameID int64) (igdb.Game,
 }
 
 // platformOf checks the release-platform membership a game resolve
-// promises; logos come from the platform catalog at create time, not this payload.
+// promises and rejects digital-only platforms (regionkit.DigitalOnlyPlatformIDs);
+// logos come from the platform catalog at create time, not this payload.
 func platformOf(g igdb.Game, platformID int64) (*store.Platform, error) {
+	if regionkit.DigitalOnlyPlatformIDs[platformID] {
+		return nil, &resolveErr{http.StatusBadRequest, "invalid_body", "that platform has no physical releases"}
+	}
 	for _, pl := range g.Platforms {
 		if pl.ID == platformID {
 			return &store.Platform{IGDBID: pl.ID, Name: pl.Name}, nil

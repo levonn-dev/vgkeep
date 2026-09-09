@@ -17,6 +17,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/levonn-dev/vgkeep/libs/go/contract/common"
+	"github.com/levonn-dev/vgkeep/libs/go/regionkit"
 	"github.com/levonn-dev/vgkeep/services/enrichment/internal/gen/api"
 	"github.com/levonn-dev/vgkeep/services/enrichment/internal/igdb"
 	"github.com/levonn-dev/vgkeep/services/enrichment/internal/match"
@@ -285,6 +286,7 @@ func (h *Handlers) searchGames(ctx context.Context, q string) ([]common.SearchRe
 			}
 		}
 	}
+	games = physicalOnly(games)
 	games = rankExactFirst(q, games)
 	if len(games) > searchLimit {
 		games = games[:searchLimit]
@@ -298,6 +300,31 @@ func (h *Handlers) searchGames(ctx context.Context, q string) ([]common.SearchRe
 		out = append(out, res)
 	}
 	return out, nil
+}
+
+// physicalOnly prunes digital-only platforms (regionkit.DigitalOnlyPlatformIDs)
+// from each game's platform list and drops games left with none; a
+// game IGDB lists without platforms at all passes through unchanged.
+func physicalOnly(games []igdb.Game) []igdb.Game {
+	out := make([]igdb.Game, 0, len(games))
+	for _, g := range games {
+		if len(g.Platforms) == 0 {
+			out = append(out, g)
+			continue
+		}
+		kept := make([]igdb.Named, 0, len(g.Platforms))
+		for _, p := range g.Platforms {
+			if !regionkit.DigitalOnlyPlatformIDs[p.ID] {
+				kept = append(kept, p)
+			}
+		}
+		if len(kept) == 0 {
+			continue
+		}
+		g.Platforms = kept
+		out = append(out, g)
+	}
+	return out
 }
 
 // rankExactFirst floats exact-name matches (normalized: brackets,

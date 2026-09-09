@@ -32,9 +32,9 @@ User-facing reads, called through the bff:
 
 | Route | What it answers |
 | --- | --- |
-| `GET /search` | Discovery search by `type` (game / hardware / pc_listing); `degraded: true` marks a provider-down local fallback |
+| `GET /search` | Discovery search by `type` (game / hardware / pc_listing), physical-only for games; `degraded: true` marks a provider-down local fallback |
 | `GET /products/{productId}` | One product, read-through cached, with inline best-effort refetch of stale IGDB projections |
-| `GET /platforms` | The IGDB platform catalog joined with alias knowledge, for pickers and the normalize lever |
+| `GET /platforms` | The IGDB platform catalog minus digital-only platforms, joined with alias knowledge, for pickers and the normalize lever |
 | `GET /fx/latest` | USD-based exchange-rate snapshot from frankfurter.dev |
 
 Shared with the collection service:
@@ -128,6 +128,11 @@ PriceCharting. A provider failure over a cold cache degrades to a local Postgres
 cached. Community products interleave after cache resolution, scored by the same name similarity, so the cached body
 stays provider-only and a fresh mint appears immediately.
 
+Game results are physical-only. The IGDB queries exclude the digital-only game types (DLC, mods, episodes, seasons,
+forks, packs, updates), and the digital-only platforms listed in `api/domain.yaml` drop off each result's platform
+list, taking the game with them when none remain. The same platform list gates game resolves and the platform
+catalog. IGDB carries no per-game physical flag, so PC-only digital titles still surface.
+
 ```mermaid
 ---
 title: "Catalog search"
@@ -146,7 +151,7 @@ sequenceDiagram
     SPA->>GW: GET /api/search
     GW->>B: route (the only published service)
     B->>E: GET /search (type, q)
-    E->>V: GET search:v3 key
+    E->>V: GET search:v4 key
     alt cache hit
         V-->>E: cached provider results
     else miss
@@ -376,7 +381,7 @@ What the diagram cannot say:
 - `platforms` (`igdb_id`, `name`, `abbreviation`, `generation`, `logo_url`, `fetched_at`) holds the wholesale IGDB
   platform catalog; staleness rides the same `IGDB_REFRESH_AFTER` horizon.
 
-Valkey keyspace (`internal/cache`): `search:v3:<kind>:<hex sha256 of the normalized query>` at `SEARCH_CACHE_TTL`
+Valkey keyspace (`internal/cache`): `search:v4:<kind>:<hex sha256 of the normalized query>` at `SEARCH_CACHE_TTL`
 (24h), `product:v1:<uuid>` at `PRODUCT_CACHE_TTL` (5m), and the single wholesale key `platforms:v1` at the search
 TTL. Valkey is a pure cache: startup requires it (deploy ordering), every runtime call fails open, and a restart
 starts cold.

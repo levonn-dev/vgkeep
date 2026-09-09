@@ -239,7 +239,7 @@ func (h *Handlers) PromoteProduct(w http.ResponseWriter, r *http.Request, produc
 		}
 		p, perr := platformOf(g, *req.PlatformIgdbId)
 		if perr != nil {
-			problem(w, r, http.StatusBadRequest, "invalid_body", "the game did not release on that platform")
+			h.resolveError(w, r, perr)
 			return
 		}
 		platform = p

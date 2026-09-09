@@ -768,6 +768,32 @@ func TestUnitPromoteGame_ProviderOutageIs502(t *testing.T) {
 	reqtest.AssertProblemRec(t, rec, http.StatusBadGateway, "upstream_unavailable")
 }
 
+// Pins the physical-catalog gate on promote: the same platform check
+// as resolve rejects a digital-only platform (regionkit.DigitalOnlyPlatformIDs).
+func TestUnitPromoteGame_DigitalOnlyPlatformRejected(t *testing.T) {
+	env := newAuthEnv(t)
+	admin := env.token(t, uuid.NewString(), []string{"user", "admin"})
+	comm := store.Product{ID: uuid.NewString(), Type: "game", Name: "Genshin Impact Repro", Origin: "community"}
+	st := &stubStore{
+		getProduct: func(context.Context, string) (store.Product, error) { return comm, nil },
+		rawByIDs:   func(context.Context, []int64) ([]store.RawGame, error) { return nil, nil },
+		upsertRaw:  func(context.Context, []igdb.Game, time.Time) error { return nil },
+	}
+	games := &stubGames{gamesByIDs: func(context.Context, []int64) ([]igdb.Game, error) {
+		return []igdb.Game{{ID: 119277, Name: "Genshin Impact",
+			Platforms: []igdb.Named{{ID: 39, Name: "iOS"}, {ID: 48, Name: "PlayStation 4"}}}}, nil
+	}}
+	h := newUnitHandlers(st, games, &stubPrices{}, newStubCache())
+
+	rec := serveUnit(t, h, env, http.MethodPost, "/admin/products/"+comm.ID+"/promote", admin,
+		map[string]any{"igdb_game_id": 119277, "platform_igdb_id": 39})
+
+	pb := reqtest.AssertProblemRec(t, rec, http.StatusBadRequest, "invalid_body")
+	if !strings.Contains(pb.Detail, "physical") {
+		t.Fatalf("detail must name the physical-only gate, got %q", pb.Detail)
+	}
+}
+
 // Pins the hardware branch's unknown-listing outcome: the pc anchor
 // fetch answering pricecharting.ErrNotFound maps to 404
 // unknown_pc_product, a distinct call site from /products/resolve's.

@@ -17,8 +17,11 @@ Features as an operator sees them:
 
 - Catalog search (`GET /search`, kinds game / hardware / pc_listing),
   Valkey-cached 24h, with admin-minted community products interleaved
-  into game and hardware results. Provider down: answers degrade to a
-  local Postgres name match, flagged `degraded: true` and never cached.
+  into game and hardware results. Game results are physical-only:
+  digital-only game types are excluded at IGDB and the digital-only
+  platforms in `api/domain.yaml` are pruned. Provider down: answers
+  degrade to a local Postgres name match, flagged `degraded: true` and
+  never cached.
 - Product resolve (`POST /products/resolve`): find-or-create keyed by
   provider identity. No-pick game resolves run the auto-matcher
   against PriceCharting listings, taking the entry region as a
@@ -39,7 +42,7 @@ Features as an operator sees them:
   scoring over the shared `igdb_raw` metadata cache, library up to
   2500 entries, candidate budget 200.
 - FX rates (`GET /fx/latest`) and the platform catalog
-  (`GET /platforms`).
+  (`GET /platforms`, minus the digital-only platforms).
 - The catalog refresh (`POST /internal/refresh`, CronJob at 06:00,
   guarded by a service token minted from auth's
   `/internal/service-token`): price refresh + snapshot for every
@@ -253,7 +256,7 @@ Valkey (`enrichment-valkey`, StatefulSet, valkey:8-alpine) is a pure
 cache: TLS-only listener on 6379, no client cert auth, no persistence
 (`--save ""`, `--appendonly no`, emptyDir), so a restart starts cold
 and everything rebuilds from providers and Postgres. Keys:
-`search:v3:<kind>:<sha256(query)>` (24h), `product:v1:<uuid>` (5m),
+`search:v4:<kind>:<sha256(query)>` (24h), `product:v1:<uuid>` (5m),
 `platforms:v1` (24h). The redis_exporter sidecar serves 9121
 (`service` label `enrichment-valkey`).
 

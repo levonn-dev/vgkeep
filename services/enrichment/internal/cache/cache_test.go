@@ -40,7 +40,7 @@ func TestSearch_RoundTripKindsAndExpiry(t *testing.T) {
 	if err != nil || string(hit) != `{"degraded":false}` {
 		t.Fatalf("hit: %s, %v", hit, err)
 	}
-	// Pins the exact versioned key (search:v3:...), so forgetting the
+	// Pins the exact versioned key (search:v4:...), so forgetting the
 	// version bump on a future schema change is caught here.
 	raw, err := valkeykit.Connect(ctx, valkeytest.URL(t))
 	if err != nil {
@@ -48,7 +48,7 @@ func TestSearch_RoundTripKindsAndExpiry(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = raw.Close() })
 	sum := sha256.Sum256([]byte("zelda"))
-	wantKey := "search:v3:game:" + hex.EncodeToString(sum[:])
+	wantKey := "search:v4:game:" + hex.EncodeToString(sum[:])
 	if n, err := raw.Exists(ctx, wantKey).Result(); err != nil || n != 1 {
 		t.Fatalf("expected key %q under the versioned prefix: n=%d err=%v", wantKey, n, err)
 	}

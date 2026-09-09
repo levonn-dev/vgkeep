@@ -785,6 +785,32 @@ func TestUnitResolve_UpstreamDown(t *testing.T) {
 	reqtest.AssertProblemRec(t, rec, http.StatusBadGateway, "upstream_unavailable")
 }
 
+// Pins the physical-catalog gate on resolve: a game's own platform
+// list can carry a digital-only platform (regionkit.DigitalOnlyPlatformIDs),
+// and resolving onto it is rejected before anything is minted.
+func TestUnitResolve_DigitalOnlyPlatformRejected(t *testing.T) {
+	env := newAuthEnv(t)
+	tok := env.token(t, "u1", []string{"user"})
+	st := &stubStore{
+		findProduct: func(context.Context, store.ProductKey) (store.Product, error) {
+			return store.Product{}, store.ErrNotFound
+		},
+		rawByIDs:  func(context.Context, []int64) ([]store.RawGame, error) { return nil, nil },
+		upsertRaw: func(context.Context, []igdb.Game, time.Time) error { return nil },
+	}
+	games := &stubGames{gamesByIDs: func(context.Context, []int64) ([]igdb.Game, error) {
+		return []igdb.Game{{ID: 119277, Name: "Genshin Impact",
+			Platforms: []igdb.Named{{ID: 39, Name: "iOS"}, {ID: 48, Name: "PlayStation 4"}}}}, nil
+	}}
+	h := newUnitHandlers(st, games, nil, newStubCache())
+	rec := serveUnit(t, h, env, http.MethodPost, "/products/resolve", tok,
+		map[string]any{"type": "game", "igdb_game_id": 119277, "platform_igdb_id": 39})
+	pb := reqtest.AssertProblemRec(t, rec, http.StatusBadRequest, "invalid_body")
+	if !strings.Contains(pb.Detail, "physical") {
+		t.Fatalf("detail must name the physical-only gate, got %q", pb.Detail)
+	}
+}
+
 // A pre-feature raw (nil release table) with the provider down is
 // still usable stale (misses only per-region dates), matching the
 // read path's serve-stale posture; the nightly reprojection heals it

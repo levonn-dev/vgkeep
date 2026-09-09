@@ -79,3 +79,33 @@ func TestUnitListPlatforms_JoinsAliasesSortsAndCaches(t *testing.T) {
 		t.Fatalf("second call hit the store, want cache")
 	}
 }
+
+// Pins the physical-catalog gate on the platform catalog: digital-only
+// platforms (regionkit.DigitalOnlyPlatformIDs) never reach the picker
+// or the normalize lever, however the cached IGDB table lists them.
+func TestUnitListPlatforms_OmitsDigitalOnlyPlatforms(t *testing.T) {
+	env := newAuthEnv(t)
+	user := env.token(t, uuid.NewString(), []string{"user"})
+	st := &stubStore{
+		platformsFetchedAt: func(context.Context) (time.Time, error) { return time.Now().UTC(), nil },
+		listPlatforms: func(context.Context) ([]store.CatalogPlatform, error) {
+			return []store.CatalogPlatform{
+				{ID: 39, Name: "iOS"},
+				{ID: 19, Name: "Super Nintendo Entertainment System"},
+			}, nil
+		},
+	}
+	h := newUnitHandlers(st, &stubGames{}, &stubPrices{}, newStubCache())
+
+	rec := serveUnit(t, h, env, http.MethodGet, "/platforms", user, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("platforms: %d %s", rec.Code, rec.Body.String())
+	}
+	var out api.PlatformCatalog
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatal(err)
+	}
+	if len(out.Platforms) != 1 || out.Platforms[0].IgdbId != 19 {
+		t.Fatalf("want only the SNES row, got %+v", out.Platforms)
+	}
+}

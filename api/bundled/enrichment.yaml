@@ -12,7 +12,7 @@ paths:
       operationId: searchCatalog
       summary: Discovery search (game metadata via IGDB, hardware via PriceCharting)
       description: |
-        Results come from a 24h per-query Valkey cache in front of the provider, never from the local catalog first (it is incomplete by construction). When the provider is down and the cache is cold, the local catalog answers a name match and the response is flagged degraded. type pc_listing searches ALL of PriceCharting (games, hardware, every category) and carries the provider's loose/cib/new prices per listing; it exists for picking exact variant listings as price sources.
+        Results come from a 24h per-query Valkey cache in front of the provider, never from the local catalog first (it is incomplete by construction). When the provider is down and the cache is cold, the local catalog answers a name match and the response is flagged degraded. type game is physical-only: digital-only game types (DLC, mods, episodes, seasons, forks, packs, updates) never surface, digital-only platforms (phone operating systems, streaming and store-only platforms, VR stores, download-only consoles) drop off each result's platform list, and a game left with none is not returned. type pc_listing searches ALL of PriceCharting (games, hardware, every category) and carries the provider's loose/cib/new prices per listing; it exists for picking exact variant listings as price sources.
       parameters:
         - name: type
           in: query
@@ -189,7 +189,7 @@ paths:
       operationId: listPlatforms
       summary: The canonical platform catalog with alias knowledge
       description: |
-        The IGDB platform catalog (igdb id + name) joined with the alias table - PriceCharting console spellings plus curated abbreviations (SNES, PSX, N64, ...) - sorted by name. Reference data for the custom-entry platform picker and the collection normalize-platforms lever: consumers filter and match against name + aliases and never hard-code aliases themselves. Cached 24h (the search-cache idiom); the catalog changes only when the platform sweep lands new rows. A cold catalog with the provider down is the only 502.
+        The IGDB platform catalog (igdb id + name) minus the digital-only platforms (phone operating systems, streaming and store-only platforms, VR stores, download-only consoles), joined with the alias table - PriceCharting console spellings plus curated abbreviations (SNES, PSX, N64, ...) - sorted by name. Reference data for the custom-entry platform picker and the collection normalize-platforms lever: consumers filter and match against name + aliases and never hard-code aliases themselves. Cached 24h (the search-cache idiom); the catalog changes only when the platform sweep lands new rows. A cold catalog with the provider down is the only 502.
       responses:
         '200':
           description: The platform catalog
@@ -654,6 +654,8 @@ components:
           type: integer
           format: int64
         platforms:
+          description: |
+            Platforms the game released on, minus digital-only platforms (a game left with none is not returned). Games only.
           type: array
           items:
             $ref: '#/components/schemas/PlatformRef'
@@ -1082,7 +1084,7 @@ components:
           format: int64
     ResolveRequest:
       description: |
-        type game requires igdb_game_id + platform_igdb_id (the platform must be one the game released on). Game identity is listing-keyed - (game, platform, PriceCharting listing) - so edition/variant on a game resolve are ignored (entry-level facts, like pc_listing); region is a matching input only (see the region property) and never joins identity. Without pc_product_id the resolve auto-matches by the game name (region-steered) through the shared listing-search cache and lands on the winning listing's product; below the confidence threshold, or with the provider down, it lands on the game+platform's single unmatched product instead - never guessed. Optional match_hint (game only, ignored elsewhere) reweights the scoring toward variant text without changing the search query; a hint nothing matches makes the resolve conservative (unmatched). With pc_product_id (a manual match: the exact listing the user chose) auto-match is skipped and the resolve finds or mints the product carrying that listing (match_confidence 1.0, verified false); unknown id answers 404 unknown_pc_product, provider failure 502 upstream_unavailable. Resolves never touch an existing product's mapping; corrections stay on the admin mapping endpoint. console/accessory require pc_product_id; region/edition/variant distinguish physical variants and are part of hardware identity. type pc_listing requires pc_product_id and mints a price-anchor product for that exact listing; region/edition/variant are ignored (the listing IS the exact variant).
+        type game requires igdb_game_id + platform_igdb_id (the platform must be one the game released on and not a digital-only platform). Game identity is listing-keyed - (game, platform, PriceCharting listing) - so edition/variant on a game resolve are ignored (entry-level facts, like pc_listing); region is a matching input only (see the region property) and never joins identity. Without pc_product_id the resolve auto-matches by the game name (region-steered) through the shared listing-search cache and lands on the winning listing's product; below the confidence threshold, or with the provider down, it lands on the game+platform's single unmatched product instead - never guessed. Optional match_hint (game only, ignored elsewhere) reweights the scoring toward variant text without changing the search query; a hint nothing matches makes the resolve conservative (unmatched). With pc_product_id (a manual match: the exact listing the user chose) auto-match is skipped and the resolve finds or mints the product carrying that listing (match_confidence 1.0, verified false); unknown id answers 404 unknown_pc_product, provider failure 502 upstream_unavailable. Resolves never touch an existing product's mapping; corrections stay on the admin mapping endpoint. console/accessory require pc_product_id; region/edition/variant distinguish physical variants and are part of hardware identity. type pc_listing requires pc_product_id and mints a price-anchor product for that exact listing; region/edition/variant are ignored (the listing IS the exact variant).
       type: object
       required:
         - type

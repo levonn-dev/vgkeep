@@ -28,6 +28,12 @@ paths:
         by construction). When the provider is down and the cache is
         cold, the local catalog answers a name match and the response
         is flagged degraded.
+        type game is physical-only: digital-only game types (DLC, mods,
+        episodes, seasons, forks, packs, updates) never surface,
+        digital-only platforms (phone operating systems, streaming and
+        store-only platforms, VR stores, download-only consoles) drop
+        off each result's platform list, and a game left with none is
+        not returned.
         type pc_listing searches ALL of PriceCharting (games, hardware,
         every category) and carries the provider's loose/cib/new prices
         per listing; it exists for picking exact variant listings as
@@ -205,9 +211,11 @@ paths:
       operationId: listPlatforms
       summary: The canonical platform catalog with alias knowledge
       description: >
-        The IGDB platform catalog (igdb id + name) joined with the alias
-        table - PriceCharting console spellings plus curated
-        abbreviations (SNES, PSX, N64, ...) - sorted by name. Reference
+        The IGDB platform catalog (igdb id + name) minus the
+        digital-only platforms (phone operating systems, streaming and
+        store-only platforms, VR stores, download-only consoles), joined
+        with the alias table - PriceCharting console spellings plus
+        curated abbreviations (SNES, PSX, N64, ...) - sorted by name. Reference
         data for the custom-entry platform picker and the collection
         normalize-platforms lever: consumers filter and match against
         name + aliases and never hard-code aliases themselves. Cached

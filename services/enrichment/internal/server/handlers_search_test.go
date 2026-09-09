@@ -570,6 +570,42 @@ func TestSearch_NonLatinQueryReachesViaLocalizationLeg(t *testing.T) {
 	}
 }
 
+// Pins the physical-catalog gate on search results: digital-only
+// platforms (regionkit.DigitalOnlyPlatformIDs) drop off a game's
+// platform refs, and a game listed only on such platforms drops out.
+// A game IGDB lists without platforms at all is unchanged.
+func TestUnitSearch_DropsDigitalOnlyPlatforms(t *testing.T) {
+	env := newAuthEnv(t)
+	games := &stubGames{searchGames: func(context.Context, string, int) ([]igdb.Game, error) {
+		return []igdb.Game{
+			{ID: 113112, Name: "Hades", Platforms: []igdb.Named{{ID: 39, Name: "iOS"}, {ID: 48, Name: "PlayStation 4"}}},
+			{ID: 266203, Name: "Hades Browser Clone", Platforms: []igdb.Named{{ID: 82, Name: "Web browser"}, {ID: 34, Name: "Android"}}},
+			{ID: 300000, Name: "Hades Unannounced"},
+		}, nil
+	}}
+	st := &stubStore{searchCommunityProducts: func(context.Context, []string, string, int) ([]store.Product, error) { return nil, nil }}
+	h := newUnitHandlers(st, games, nil, newStubCache())
+
+	rec := serveUnit(t, h, env, http.MethodGet, "/search?type=game&q=hades", env.token(t, "u1", []string{"user"}), nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("search: %d %s", rec.Code, rec.Body.String())
+	}
+	var out api.SearchResults
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatal(err)
+	}
+	if len(out.Results) != 2 || *out.Results[0].IgdbGameId != 113112 || *out.Results[1].IgdbGameId != 300000 {
+		t.Fatalf("want Hades and the platformless game only, got %+v", out.Results)
+	}
+	prs := *out.Results[0].Platforms
+	if len(prs) != 1 || prs[0].IgdbPlatformId != 48 {
+		t.Fatalf("want only the PlayStation 4 ref to survive, got %+v", prs)
+	}
+	if out.Results[1].Platforms != nil {
+		t.Fatalf("platformless game must stay platformless, got %+v", out.Results[1].Platforms)
+	}
+}
+
 // Proves the non-latin trigger gate (hasNonLatinLetter): an all-latin
 // query must cost zero SearchLocalizations calls.
 func TestUnitSearch_LatinQueryNeverCallsLocalizationLeg(t *testing.T) {
