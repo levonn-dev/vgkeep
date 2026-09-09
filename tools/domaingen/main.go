@@ -25,6 +25,7 @@ type domain struct {
 	Regions        []regionRow        `yaml:"regions"`
 	JPConsoleNames []string           `yaml:"jp_console_names"`
 	Platforms      []platformRow      `yaml:"platforms"`
+	DigitalOnly    []digitalOnlyRow   `yaml:"digital_only_platforms"`
 	ReleaseRegions []releaseRegionRow `yaml:"release_regions"`
 }
 
@@ -43,6 +44,13 @@ type platformRow struct {
 	Name       string `yaml:"name"`
 	Region     string `yaml:"region"`
 	TwinIGDBID int64  `yaml:"twin_igdb_id"`
+}
+
+// digitalOnlyRow is one entry in domain.yaml's digital_only_platforms
+// list; Name is descriptive only.
+type digitalOnlyRow struct {
+	IGDBID int64  `yaml:"igdb_id"`
+	Name   string `yaml:"name"`
 }
 
 // releaseRegionRow decodes one release_regions entry: IGDB's enum id to
@@ -146,6 +154,14 @@ func generateGo(d *domain, pkg string) ([]byte, error) {
 		}
 		fmt.Fprintf(&b, "\t%d: %d,\n", p.IGDBID, p.TwinIGDBID)
 		fmt.Fprintf(&b, "\t%d: %d,\n", p.TwinIGDBID, p.IGDBID)
+	}
+	b.WriteString("}\n\n")
+
+	b.WriteString("// DigitalOnlyPlatformIDs are the IGDB platforms that never carried\n")
+	b.WriteString("// physical media; the catalog hides them while entries are physical-only.\n")
+	b.WriteString("var DigitalOnlyPlatformIDs = map[int64]bool{\n")
+	for _, p := range d.DigitalOnly {
+		fmt.Fprintf(&b, "\t%d: true, // %s\n", p.IGDBID, p.Name)
 	}
 	b.WriteString("}\n\n")
 

@@ -18,6 +18,11 @@ platforms:
   - igdb_id: 51
     name: Famicom Disk System
     region: ntsc_j
+digital_only_platforms:
+  - igdb_id: 39
+    name: iOS
+  - igdb_id: 82
+    name: Web browser
 release_regions:
   - igdb_id: 2
     name: north_america

@@ -62,6 +62,13 @@ var TwinPlatformIDs = map[int64]int64{
 	18: 99,
 }
 
+// DigitalOnlyPlatformIDs are the IGDB platforms that never carried
+// physical media; the catalog hides them while entries are physical-only.
+var DigitalOnlyPlatformIDs = map[int64]bool{
+	39: true, // iOS
+	82: true, // Web browser
+}
+
 // ReleaseRegionNames maps IGDB's release_region vendor enum onto its
 // canonical name; an id absent from this map is unknown to this service.
 var ReleaseRegionNames = map[int]string{

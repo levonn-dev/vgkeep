@@ -73,6 +73,45 @@ var TwinPlatformIDs = map[int64]int64{
 	19: 58,
 }
 
+// DigitalOnlyPlatformIDs are the IGDB platforms that never carried
+// physical media; the catalog hides them while entries are physical-only.
+var DigitalOnlyPlatformIDs = map[int64]bool{
+	34:  true, // Android
+	39:  true, // iOS
+	73:  true, // BlackBerry OS
+	74:  true, // Windows Phone
+	405: true, // Windows Mobile
+	417: true, // Palm OS
+	472: true, // visionOS
+	47:  true, // Virtual Console
+	82:  true, // Web browser
+	113: true, // OnLive Game System
+	132: true, // Amazon Fire TV
+	170: true, // Google Stadia
+	203: true, // Google Stadia duplicate row
+	372: true, // OOParts
+	389: true, // AirConsole
+	161: true, // Windows Mixed Reality
+	162: true, // Oculus VR
+	163: true, // SteamVR
+	164: true, // Daydream
+	384: true, // Oculus Quest
+	385: true, // Oculus Rift
+	386: true, // Meta Quest 2
+	387: true, // Oculus Go
+	388: true, // Gear VR
+	471: true, // Meta Quest 3
+	72:  true, // Ouya
+	240: true, // Zeebo
+	55:  true, // Legacy Mobile Device
+	381: true, // Playdate
+	377: true, // Plug & Play
+	382: true, // Intellivision Amico
+	438: true, // Arduboy
+	440: true, // Visual Memory Unit
+	441: true, // PocketStation
+}
+
 // ReleaseRegionNames maps IGDB's release_region vendor enum onto its
 // canonical name; an id absent from this map is unknown to this service.
 var ReleaseRegionNames = map[int]string{

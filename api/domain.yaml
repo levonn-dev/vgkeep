@@ -33,6 +33,79 @@ platforms:
   - igdb_id: 51
     name: Famicom Disk System
     region: ntsc_j
+# digital_only_platforms never carried physical media: phone operating
+# systems, streaming and store-only platforms, VR stores, download-only
+# consoles and handhelds. Enrichment hides them from search results, the
+# platform catalog, and game resolves while entries are physical-only.
+digital_only_platforms:
+  - igdb_id: 34
+    name: Android
+  - igdb_id: 39
+    name: iOS
+  - igdb_id: 73
+    name: BlackBerry OS
+  - igdb_id: 74
+    name: Windows Phone
+  - igdb_id: 405
+    name: Windows Mobile
+  - igdb_id: 417
+    name: Palm OS
+  - igdb_id: 472
+    name: visionOS
+  - igdb_id: 47
+    name: Virtual Console
+  - igdb_id: 82
+    name: Web browser
+  - igdb_id: 113
+    name: OnLive Game System
+  - igdb_id: 132
+    name: Amazon Fire TV
+  - igdb_id: 170
+    name: Google Stadia
+  - igdb_id: 203
+    name: Google Stadia duplicate row
+  - igdb_id: 372
+    name: OOParts
+  - igdb_id: 389
+    name: AirConsole
+  - igdb_id: 161
+    name: Windows Mixed Reality
+  - igdb_id: 162
+    name: Oculus VR
+  - igdb_id: 163
+    name: SteamVR
+  - igdb_id: 164
+    name: Daydream
+  - igdb_id: 384
+    name: Oculus Quest
+  - igdb_id: 385
+    name: Oculus Rift
+  - igdb_id: 386
+    name: Meta Quest 2
+  - igdb_id: 387
+    name: Oculus Go
+  - igdb_id: 388
+    name: Gear VR
+  - igdb_id: 471
+    name: Meta Quest 3
+  - igdb_id: 72
+    name: Ouya
+  - igdb_id: 240
+    name: Zeebo
+  - igdb_id: 55
+    name: Legacy Mobile Device
+  - igdb_id: 381
+    name: Playdate
+  - igdb_id: 377
+    name: Plug & Play
+  - igdb_id: 382
+    name: Intellivision Amico
+  - igdb_id: 438
+    name: Arduboy
+  - igdb_id: 440
+    name: Visual Memory Unit
+  - igdb_id: 441
+    name: PocketStation
 # release_regions is IGDB's release_region vendor enum (the wire id),
 # decoded to its canonical name by services/enrichment/internal/igdb.RegionName.
 # entry_region is the collector's-entry region a release badges as
