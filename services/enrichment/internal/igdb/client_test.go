@@ -140,7 +140,7 @@ func TestClient_SearchLocalizationsQuoteStripAndShape(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(body, `where name ~ *"ゼルダの伝説"*;`) || !strings.Contains(body, "limit 20;") {
+	if !strings.Contains(body, `where name ~ *"ゼルダの伝説"* & game.game_type != (1,5,6,7,12,13,14);`) || !strings.Contains(body, "limit 20;") {
 		t.Fatalf("bad where body (quotes and backslashes must be stripped): %s", body)
 	}
 	if len(got) != 2 || got[0] != 1001 || got[1] != 1016 {
@@ -173,6 +173,47 @@ func TestClient_PlatformsQueryShape(t *testing.T) {
 	}
 	if body != "fields name,abbreviation,generation,platform_logo.image_id; sort id asc; limit 500;" {
 		t.Fatalf("bad platforms body: %s", body)
+	}
+}
+
+// Pins the physical-catalog gate: every discovery query excludes the
+// digital-only game types, while fetch-by-ids stays unfiltered so
+// existing products keep refreshing whatever their type.
+func TestClient_DiscoveryQueriesExcludeDigitalOnlyTypes(t *testing.T) {
+	var bodies []string // search, localizations, popular, by-ids (call order)
+	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		bodies = append(bodies, string(b))
+		_, _ = w.Write([]byte(`[]`))
+	})
+	ctx := context.Background()
+	if _, err := c.SearchGames(ctx, "zelda", 20); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.SearchLocalizations(ctx, "ゼルダ", 20); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.PopularGames(ctx, []int64{12}, []int64{7}, 10); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.GamesByIDs(ctx, []int64{1011}); err != nil {
+		t.Fatal(err)
+	}
+	if len(bodies) != 4 {
+		t.Fatalf("want 4 provider calls, got %d", len(bodies))
+	}
+	const clause = "game_type != (1,5,6,7,12,13,14)"
+	if !strings.Contains(bodies[0], `search "zelda"; fields `) || !strings.Contains(bodies[0], "; where "+clause+"; limit 20;") {
+		t.Fatalf("search must gate on game type: %s", bodies[0])
+	}
+	if !strings.Contains(bodies[1], `where name ~ *"ゼルダ"* & game.`+clause+"; limit 20;") {
+		t.Fatalf("localization leg must gate on the expanded game's type: %s", bodies[1])
+	}
+	if !strings.Contains(bodies[2], "where genres = (12) & total_rating_count >= 20 & id != (7) & "+clause+"; sort total_rating desc;") {
+		t.Fatalf("popular query must append the gate to its where clause: %s", bodies[2])
+	}
+	if !strings.Contains(bodies[3], "; where id = (1011); limit 1;") || strings.Contains(bodies[3], "game_type") {
+		t.Fatalf("fetch-by-ids must stay unfiltered: %s", bodies[3])
 	}
 }
 

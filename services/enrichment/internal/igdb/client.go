@@ -23,6 +23,10 @@ const (
 	// {id, name} pairs without asking for genres.id.
 	gameFields     = "name,cover.image_id,genres.name,themes.name,franchises.name,similar_games,involved_companies.company.name,involved_companies.developer,involved_companies.publisher,first_release_date,release_dates.date,release_dates.platform,release_dates.release_region,platforms.name,total_rating,total_rating_count,alternative_names.name,alternative_names.comment,game_localizations.name,game_localizations.region.identifier,game_localizations.cover.image_id"
 	platformFields = "name,abbreviation,generation,platform_logo.image_id"
+	// physicalTypesWhere drops the digital-only game types (DLC, Mod,
+	// Episode, Season, Fork, Pack / Addon, Update) from discovery
+	// queries; fetch-by-ids stays unfiltered so existing products keep refreshing.
+	physicalTypesWhere = "game_type != (1,5,6,7,12,13,14)"
 )
 
 // Client is the real IGDB v4 client: a cached Twitch app token behind
@@ -141,7 +145,7 @@ func intsCSV(ids []int64) string {
 
 // SearchGames runs a full-text search.
 func (c *Client) SearchGames(ctx context.Context, q string, limit int) ([]Game, error) {
-	body := fmt.Sprintf("search %q; fields %s; limit %d;", q, gameFields, limit)
+	body := fmt.Sprintf("search %q; fields %s; where %s; limit %d;", q, gameFields, physicalTypesWhere, limit)
 	var out []Game
 	if err := c.query(ctx, "games", body, &out); err != nil {
 		return nil, err
@@ -157,7 +161,7 @@ func (c *Client) SearchLocalizations(ctx context.Context, q string, limit int) (
 	if strings.TrimSpace(clean) == "" {
 		return nil, nil
 	}
-	body := fmt.Sprintf(`fields game; where name ~ *"%s"*; limit %d;`, clean, limit)
+	body := fmt.Sprintf(`fields game; where name ~ *"%s"* & game.%s; limit %d;`, clean, physicalTypesWhere, limit)
 	var out []struct {
 		Game int64 `json:"game"`
 	}
@@ -212,6 +216,7 @@ func (c *Client) PopularGames(ctx context.Context, genreIDs []int64, excludeIDs 
 		}
 		where += fmt.Sprintf(" & id != (%s)", intsCSV(capped))
 	}
+	where += " & " + physicalTypesWhere
 	// limit grows with the exclude count (headroom for the client-side
 	// filter), capped at maxIDsPerQuery, the API's hard ceiling.
 	queryLimit := min(limit+len(excludeIDs), maxIDsPerQuery)
